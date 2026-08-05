@@ -5,9 +5,12 @@
  *  - 扩展设置面板输入网站用户名/密码，直连 Supabase Auth REST 登录
  *    （密码仅用于登录、绝不落地保存；只保存可续期、可吊销的 refresh token 凭据）
  *  - 打开面板后通过 postMessage 将登录态注入站点 iframe，自动登录
+ *  - 反向同步：站内手动登录 / SDK 自动续期后，站点把最新会话（kapuk-site-auth）
+ *    推回本扩展保存，两侧始终持有同一条有效 token 链（refresh token 轮换不失效）
  *  - 站点内点击「下载」→ postMessage 通知本扩展 → 抓取 PNG →
  *    POST /api/characters/import 导入酒馆角色列表（计费仍在站点侧完成）
  */
+
 import { getRequestHeaders, getCharacters, saveSettingsDebounced, name1 } from '../../../../script.js';
 import { extension_settings, renderExtensionTemplateAsync } from '../../../extensions.js';
 
@@ -127,6 +130,13 @@ function clearTokens() {
 /* ---------------- iframe 面板 ---------------- */
 
 let iframeCreated = false;
+// 登出标记：置位后下次加载 iframe 时通过 URL（logout=1）通知站点自清会话，
+// 覆盖「退出时 iframe 尚未创建 / postMessage 未送达」的场景，不依赖消息时序
+let pendingLogout = false;
+
+function getIframeSrc() {
+    return `${getSiteUrl()}/?st=1${pendingLogout ? '&logout=1' : ''}#/`;
+}
 
 function ensureIframe() {
     const wrap = document.getElementById('kapuk_iframe_wrap');
@@ -140,7 +150,7 @@ function ensureIframe() {
     iframe.addEventListener('load', () => {
         document.getElementById('kapuk_iframe_placeholder')?.classList.add('kapuk-placeholder-hidden');
     });
-    iframe.src = `${getSiteUrl()}/?st=1#/`;
+    iframe.src = getIframeSrc();
     wrap.appendChild(iframe);
 }
 
@@ -170,20 +180,21 @@ function sendAuthToIframe() {
 let logoutAckTimer = null;
 
 function sendLogoutToIframe() {
+    pendingLogout = true; // 无论 iframe 是否存在，下次加载都通过 URL 传递登出指令
     const iframe = getIframe();
     if (!iframe || !iframe.contentWindow) return;
     try {
         iframe.contentWindow.postMessage({ type: 'kapuk-logout' }, getSiteOrigin());
     } catch { /* ignore */ }
     // 不能立即重载 iframe：会打断站点侧 signOut 的本地会话清理，导致旧会话残留。
-    // 先等站点回执；超时（旧版站点无此消息处理）再重载兜底
+    // 先等站点回执；超时（消息未送达/旧版站点）再带 logout=1 重载兜底
     if (logoutAckTimer) clearTimeout(logoutAckTimer);
     logoutAckTimer = setTimeout(() => {
         logoutAckTimer = null;
         const f = getIframe();
         if (f) {
             document.getElementById('kapuk_iframe_placeholder')?.classList.remove('kapuk-placeholder-hidden');
-            f.src = `${getSiteUrl()}/?st=1#/`;
+            f.src = getIframeSrc();
         }
     }, 4000);
 }
@@ -196,6 +207,7 @@ function handleSiteSignedOut() {
         clearTimeout(logoutAckTimer);
         logoutAckTimer = null;
     }
+    pendingLogout = false; // 站点已完成登出，无需再通过 URL 传递
     const s = getSettings();
     if (!s.accessToken && !s.refreshToken) return;
     revokeSession(); // 吊销服务端凭据（失败不阻塞本地清理）
@@ -204,7 +216,23 @@ function handleSiteSignedOut() {
     setStatus('站点已退出登录，插件凭据已同步清除，请重新登录');
 }
 
+// 站内登录 / SDK 自动续期的反向同步：保存站点推来的最新会话，
+// 使两侧始终持有同一条有效 token 链（refresh token 轮换后插件凭据不失效）
+function handleSiteAuth(d) {
+    if (!d.access_token || !d.refresh_token) return;
+    const s = getSettings();
+    if (s.accessToken === String(d.access_token)) return; // 与现有凭据相同，跳过无意义写入
+    s.accessToken = String(d.access_token);
+    s.refreshToken = String(d.refresh_token);
+    if (d.email) s.username = String(d.email);
+    pendingLogout = false; // 站内已登录，作废登出标记（否则下次加载 iframe 会带 logout=1 把人踢掉）
+    saveSettings();
+    updateBadge();
+    setStatus(`已同步站内登录：${s.username}（凭据自动续期，无需重新登录）`);
+}
+
 /* ---------------- 导入角色卡到酒馆 ---------------- */
+
 
 async function importCardToTavern(url, title) {
     try {
@@ -274,7 +302,12 @@ function onWindowMessage(ev) {
         handleSiteSignedOut();
         return;
     }
+    if (d.type === 'kapuk-site-auth') {
+        handleSiteAuth(d);
+        return;
+    }
     if (d.type === 'kapuk-import') {
+
         importCardToTavern(d.url, d.title).then((r) => {
             try {
                 ev.source?.postMessage({ type: 'kapuk-import-result', id: d.id, ok: r.ok, error: r.error }, ev.origin);
@@ -398,7 +431,7 @@ async function addNavbarDrawer() {
         const placeholder = document.getElementById('kapuk_iframe_placeholder');
         placeholder?.classList.remove('kapuk-placeholder-hidden');
         if (iframe) {
-            iframe.src = `${getSiteUrl()}/?st=1#/`;
+            iframe.src = getIframeSrc();
         } else {
             iframeCreated = false;
             ensureIframe();
@@ -461,6 +494,7 @@ async function addSettingsPanel() {
             delete s.password; // 密码绝不落地保存
             s.accessToken = data.access_token;
             s.refreshToken = data.refresh_token;
+            pendingLogout = false; // 新登录生效，作废此前的登出标记
             saveSettings();
             $('#kapuk_password').val('');
             updateBadge();
