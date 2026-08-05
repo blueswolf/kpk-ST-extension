@@ -12,22 +12,29 @@
     align-items: center;
     justify-content: center;
     user-select: none;
+    opacity: 0.95 !important;
+    transition: opacity 0.2s ease;
+}
+
+#kapuk_drawer_icon.kapuk-nav-logo:hover {
+    opacity: 1 !important;
 }
 
 #kapuk_drawer_icon.kapuk-nav-logo span {
-    font-size: 0.62em;
+    font-size: 0.65em;
     font-weight: 900;
-    letter-spacing: 0.02em;
-    background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 55%, #7c3aed 100%);
+    letter-spacing: 0.03em;
+    background: linear-gradient(135deg, #e9d5ff 0%, #c4b5fd 45%, #a78bfa 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
     color: transparent;
-    filter: drop-shadow(0 0 4px rgba(139, 92, 246, 0.35));
+    filter: drop-shadow(0 0 5px rgba(196, 181, 253, 0.6));
+    transition: filter 0.2s ease;
 }
 
 #kapuk_drawer_icon.kapuk-nav-logo:hover span {
-    filter: drop-shadow(0 0 7px rgba(139, 92, 246, 0.65));
+    filter: drop-shadow(0 0 9px rgba(216, 180, 254, 0.9));
 }
 
 /* 顶栏抽屉面板：占满导航条下方区域 */
