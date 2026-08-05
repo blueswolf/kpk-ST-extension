@@ -1,0 +1,26 @@
+<div id="kapuk_drawer" class="drawer">
+    <div class="drawer-toggle">
+        <div id="kapuk_drawer_icon" class="drawer-icon kapuk-nav-logo closedIcon interactable" title="卡铺控 · 角色卡社区"
+            tabindex="0"><span>KPK</span></div>
+    </div>
+    <div id="kapuk_drawer_content" class="drawer-content closedDrawer">
+        <div id="kapuk_panel_header">
+            <div class="kapuk-panel-title kapuk-purple"><i class="fa-solid fa-id-card"></i><span>卡铺控</span></div>
+            <div class="kapuk-panel-actions">
+                <span id="kapuk_auth_badge" class="kapuk-badge kapuk-badge-off">未登录</span>
+                <div id="kapuk_reload_btn" class="menu_button_icon menu_button interactable" title="刷新页面"><i
+                        class="fa-solid fa-fw fa-rotate-right"></i></div>
+                <div id="kapuk_settings_btn" class="menu_button_icon menu_button interactable" title="账号设置"><i
+                        class="fa-solid fa-fw fa-gears"></i></div>
+            </div>
+        </div>
+        <div id="kapuk_iframe_wrap">
+            <div id="kapuk_iframe_placeholder">
+                <i class="fa-solid fa-id-card fa-3x kapuk-purple"></i>
+                <p>正在加载卡铺控…</p>
+                <p class="kapuk-placeholder-tip">若站点内提示需要登录，请到「扩展 → 卡铺控」面板登录账号</p>
+            </div>
+            <!-- iframe 由 index.js 动态创建，避免模板消毒被剥离 -->
+        </div>
+    </div>
+</div>

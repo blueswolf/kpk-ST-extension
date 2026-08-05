@@ -1,0 +1,32 @@
+<div class="kapuk-settings-block">
+    <div class="inline-drawer">
+        <div class="inline-drawer-toggle inline-drawer-header">
+            <b class="kapuk-purple">卡铺控 · 角色卡社区</b>
+            <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+        </div>
+        <div class="inline-drawer-content">
+            <div class="kapuk-form">
+                <label for="kapuk_site_url">站点地址</label>
+                <input id="kapuk_site_url" class="text_pole" type="text" placeholder="https://card.kpk.dpdns.org" />
+                <label for="kapuk_username">用户名 或 邮箱</label>
+                <input id="kapuk_username" class="text_pole" type="text" autocomplete="username" placeholder="卡铺控账号" />
+                <label for="kapuk_password">密码</label>
+                <input id="kapuk_password" class="text_pole" type="password" autocomplete="current-password"
+                    placeholder="仅登录时使用，不会被保存" />
+                <div class="kapuk-btn-row">
+                    <div id="kapuk_login_btn" class="menu_button interactable"><i
+                            class="fa-solid fa-right-to-bracket"></i> 登录</div>
+                    <div id="kapuk_logout_btn" class="menu_button danger_button interactable"><i
+                            class="fa-solid fa-right-from-bracket"></i> 退出登录</div>
+                </div>
+                <div id="kapuk_login_status" class="kapuk-status-text"></div>
+            </div>
+            <hr class="sysHR">
+            <div id="kapuk_open_panel_btn" class="menu_button interactable"><i class="fa-solid fa-id-card"></i> 打开卡铺控面板
+            </div>
+            <small class="kapuk-help-text">登录后，点击酒馆顶部导航栏的 <b class="kapuk-purple">KPK</b>
+                图标即可浏览卡铺控；在卡片详情页点「下载」会把角色卡直接导入酒馆角色列表（卡币 / 月卡计费规则与网站完全一致）。<b>密码不会被保存</b>——扩展只保存可自动续期、可吊销的登录凭据（refresh
+                token），凭据失效后需重新输入密码登录；点「退出登录」会立即吊销凭据。</small>
+        </div>
+    </div>
+</div>

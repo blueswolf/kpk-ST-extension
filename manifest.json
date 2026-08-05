@@ -1,0 +1,11 @@
+{
+    "display_name": "卡铺控 Kapuk",
+    "loading_order": 10,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "kapuk",
+    "version": "1.0.0",
+    "homePage": "https://card.kpk.dpdns.org"
+}
