@@ -41,10 +41,11 @@
 
 #kapuk_drawer_icon.kapuk-nav-logo img {
     pointer-events: none;
-    height: 25px;
+    height: 18px;
     width: auto;
-    max-width: 55px;
+    max-height: 18px;
     object-fit: contain;
+    aspect-ratio: auto;
     filter: drop-shadow(0 0 5px rgba(196, 181, 253, 0.6));
     transition: filter 0.2s ease, transform 0.2s ease;
 }
