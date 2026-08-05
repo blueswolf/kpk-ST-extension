@@ -41,15 +41,17 @@
 
 #kapuk_drawer_icon.kapuk-nav-logo img {
     pointer-events: none;
-    width: 22px;
-    height: 22px;
+    height: 30px;
+    width: auto;
+    max-width: 70px;
     object-fit: contain;
     filter: drop-shadow(0 0 5px rgba(196, 181, 253, 0.6));
-    transition: filter 0.2s ease;
+    transition: filter 0.2s ease, transform 0.2s ease;
 }
 
 #kapuk_drawer_icon.kapuk-nav-logo:hover img {
     filter: drop-shadow(0 0 9px rgba(216, 180, 254, 0.9));
+    transform: scale(1.06);
 }
 
 /* 顶栏抽屉面板：占满导航条下方区域 */
