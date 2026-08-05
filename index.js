@@ -163,6 +163,47 @@ function sendAuthToIframe() {
     }, getSiteOrigin());
 }
 
+/* ---------------- 退出登录联动 ---------------- */
+
+// 登出回执等待计时器：通知 iframe 登出后，若超时未收到 kapuk-signed-out 回执
+// （说明 iframe 内是旧版站点，不认识该消息），兜底重载 iframe 强制回到登录页
+let logoutAckTimer = null;
+
+function sendLogoutToIframe() {
+    const iframe = getIframe();
+    if (!iframe || !iframe.contentWindow) return;
+    try {
+        iframe.contentWindow.postMessage({ type: 'kapuk-logout' }, getSiteOrigin());
+    } catch { /* ignore */ }
+    // 不能立即重载 iframe：会打断站点侧 signOut 的本地会话清理，导致旧会话残留。
+    // 先等站点回执；超时（旧版站点无此消息处理）再重载兜底
+    if (logoutAckTimer) clearTimeout(logoutAckTimer);
+    logoutAckTimer = setTimeout(() => {
+        logoutAckTimer = null;
+        const f = getIframe();
+        if (f) {
+            document.getElementById('kapuk_iframe_placeholder')?.classList.remove('kapuk-placeholder-hidden');
+            f.src = `${getSiteUrl()}/?st=1#/`;
+        }
+    }, 4000);
+}
+
+// 站点侧会话已清除的回执 / 反向同步：
+// - 插件发起的登出：取消兜底重载计时即可（凭据已清）
+// - 站点内主动退出 / 被封踢出：插件仍持有凭据，需吊销并清除，避免下次打开面板又自动登回
+function handleSiteSignedOut() {
+    if (logoutAckTimer) {
+        clearTimeout(logoutAckTimer);
+        logoutAckTimer = null;
+    }
+    const s = getSettings();
+    if (!s.accessToken && !s.refreshToken) return;
+    revokeSession(); // 吊销服务端凭据（失败不阻塞本地清理）
+    clearTokens();
+    updateBadge();
+    setStatus('站点已退出登录，插件凭据已同步清除，请重新登录');
+}
+
 /* ---------------- 导入角色卡到酒馆 ---------------- */
 
 async function importCardToTavern(url, title) {
@@ -229,6 +270,10 @@ function onWindowMessage(ev) {
         handleAuthRequired();
         return;
     }
+    if (d.type === 'kapuk-signed-out') {
+        handleSiteSignedOut();
+        return;
+    }
     if (d.type === 'kapuk-import') {
         importCardToTavern(d.url, d.title).then((r) => {
             try {
@@ -257,6 +302,7 @@ async function handleAuthRequired() {
         clearTokens();
         updateBadge();
         setStatus('登录凭据已失效，请到「扩展 → 卡铺控」重新登录', true);
+        sendLogoutToIframe(); // 同步让站内面板回到登录页
         return;
     }
     reloginInFlight = true;
@@ -270,6 +316,7 @@ async function handleAuthRequired() {
             clearTokens();
             updateBadge();
             setStatus('登录已过期，请到「扩展 → 卡铺控」重新登录', true);
+            sendLogoutToIframe(); // 同步让站内面板回到登录页
         }
     } finally {
         reloginInFlight = false;
@@ -430,8 +477,9 @@ async function addSettingsPanel() {
         await revokeSession(); // 吊销 refresh token，使其立即失效
         clearTokens();
         delete s.password;
+        sendLogoutToIframe(); // 通知站内面板同步登出，立即回到登录页
         updateBadge();
-        setStatus('已退出登录（凭据已吊销，站点面板刷新后将需要重新登录）');
+        setStatus('已退出登录（凭据已吊销，站内面板已同步登出）');
         $('#kapuk_password').val('');
     });
 
