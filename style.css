@@ -26,16 +26,29 @@
     font-size: 0.65em;
     font-weight: 900;
     letter-spacing: 0.03em;
-    background: linear-gradient(135deg, #e9d5ff 0%, #c4b5fd 45%, #a78bfa 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    color: transparent;
+    background: linear-gradient(135deg, #e9d5ff 0%, #c4b5fd 45%, #a78bfa 100%) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    color: transparent !important;
     filter: drop-shadow(0 0 5px rgba(196, 181, 253, 0.6));
     transition: filter 0.2s ease;
 }
 
 #kapuk_drawer_icon.kapuk-nav-logo:hover span {
+    filter: drop-shadow(0 0 9px rgba(216, 180, 254, 0.9));
+}
+
+#kapuk_drawer_icon.kapuk-nav-logo img {
+    pointer-events: none;
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 5px rgba(196, 181, 253, 0.6));
+    transition: filter 0.2s ease;
+}
+
+#kapuk_drawer_icon.kapuk-nav-logo:hover img {
     filter: drop-shadow(0 0 9px rgba(216, 180, 254, 0.9));
 }
 
