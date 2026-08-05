@@ -302,6 +302,30 @@ function setStatus(text, isError = false) {
 
 /* ---------------- 顶栏抽屉 ---------------- */
 
+function toggleDrawer(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    const content = $('#kapuk_drawer_content');
+    const icon = $('#kapuk_drawer_icon');
+    const isOpen = content.hasClass('openDrawer');
+
+    if (isOpen) {
+        content.removeClass('openDrawer').addClass('closedDrawer');
+        icon.removeClass('openIcon').addClass('closedIcon');
+    } else {
+        // 打开时收起酒馆内其他打开的抽屉
+        $('.drawer-content.openDrawer').not(content).removeClass('openDrawer').addClass('closedDrawer');
+        $('.drawer-icon.openIcon').not(icon).removeClass('openIcon').addClass('closedIcon');
+
+        content.removeClass('closedDrawer').addClass('openDrawer');
+        icon.removeClass('closedIcon').addClass('openIcon');
+        ensureIframe();
+        sendAuthToIframe();
+    }
+}
+
 async function addNavbarDrawer() {
     if (document.getElementById('kapuk_drawer')) return;
     const drawerHtml = await renderExtensionTemplateAsync(EXT_ID, 'drawer');
@@ -313,28 +337,7 @@ async function addNavbarDrawer() {
     }
 
     const toggle = $('#kapuk_drawer .drawer-toggle');
-    let bound = false;
-    try {
-        const script = await import('../../../../script.js');
-        if (typeof script.doNavbarIconClick === 'function') {
-            toggle.on('click', script.doNavbarIconClick);
-            bound = true;
-        }
-    } catch (e) {
-        console.warn('[kapuk] doNavbarIconClick 不可用，回退内置开关', e);
-    }
-    if (!bound) {
-        toggle.on('click', () => {
-            const content = $('#kapuk_drawer_content');
-            const icon = $('#kapuk_drawer_icon');
-            const willOpen = content.hasClass('closedDrawer');
-            content.toggleClass('closedDrawer openDrawer');
-            icon.toggleClass('closedIcon openIcon');
-            if (willOpen) ensureIframe();
-        });
-    }
-    // 无论走哪条路径，点击时都尝试初始化 iframe（幂等）
-    toggle.on('click', () => setTimeout(ensureIframe, 0));
+    toggle.off('click').on('click', toggleDrawer);
 
     $('#kapuk_reload_btn').on('click', () => {
         const iframe = getIframe();
@@ -356,8 +359,14 @@ async function addNavbarDrawer() {
 function openDrawer() {
     ensureIframe();
     const content = $('#kapuk_drawer_content');
+    const icon = $('#kapuk_drawer_icon');
     if (content.hasClass('closedDrawer')) {
-        $('#kapuk_drawer .drawer-toggle').trigger('click');
+        $('.drawer-content.openDrawer').not(content).removeClass('openDrawer').addClass('closedDrawer');
+        $('.drawer-icon.openIcon').not(icon).removeClass('openIcon').addClass('closedIcon');
+
+        content.removeClass('closedDrawer').addClass('openDrawer');
+        icon.removeClass('closedIcon').addClass('openIcon');
+        sendAuthToIframe();
     }
 }
 
