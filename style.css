@@ -46,12 +46,12 @@
     max-height: 18px;
     object-fit: contain;
     aspect-ratio: auto;
-    filter: drop-shadow(0 0 5px rgba(196, 181, 253, 0.6));
-    transition: filter 0.2s ease, transform 0.2s ease;
+    filter: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 #kapuk_drawer_icon.kapuk-nav-logo:hover img {
-    filter: drop-shadow(0 0 9px rgba(216, 180, 254, 0.9));
+    filter: none;
     transform: scale(1.05);
 }
 
