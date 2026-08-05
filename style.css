@@ -21,6 +21,8 @@
 }
 
 #kapuk_drawer_icon.kapuk-nav-logo span {
+    /* 关键：点击穿透到 .drawer-icon 父元素，避免触发酒馆"点空白自动关抽屉"的全局逻辑导致面板无法收回 */
+    pointer-events: none;
     font-size: 0.65em;
     font-weight: 900;
     letter-spacing: 0.03em;
