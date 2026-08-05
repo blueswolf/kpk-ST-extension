@@ -302,30 +302,6 @@ function setStatus(text, isError = false) {
 
 /* ---------------- 顶栏抽屉 ---------------- */
 
-function toggleDrawer(e) {
-    if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-    const content = $('#kapuk_drawer_content');
-    const icon = $('#kapuk_drawer_icon');
-    const isOpen = content.hasClass('openDrawer');
-
-    if (isOpen) {
-        content.removeClass('openDrawer').addClass('closedDrawer');
-        icon.removeClass('openIcon').addClass('closedIcon');
-    } else {
-        // 打开时收起酒馆内其他打开的抽屉
-        $('.drawer-content.openDrawer').not(content).removeClass('openDrawer').addClass('closedDrawer');
-        $('.drawer-icon.openIcon').not(icon).removeClass('openIcon').addClass('closedIcon');
-
-        content.removeClass('closedDrawer').addClass('openDrawer');
-        icon.removeClass('closedIcon').addClass('openIcon');
-        ensureIframe();
-        sendAuthToIframe();
-    }
-}
-
 async function addNavbarDrawer() {
     if (document.getElementById('kapuk_drawer')) return;
     const drawerHtml = await renderExtensionTemplateAsync(EXT_ID, 'drawer');
@@ -337,7 +313,38 @@ async function addNavbarDrawer() {
     }
 
     const toggle = $('#kapuk_drawer .drawer-toggle');
-    toggle.off('click').on('click', toggleDrawer);
+    try {
+        const script = await import('../../../../script.js');
+        if (typeof script.doNavbarIconClick === 'function') {
+            toggle.off('click').on('click', script.doNavbarIconClick);
+        }
+    } catch (e) {
+        console.warn('[kapuk] 导入 doNavbarIconClick 失败，使用回退逻辑', e);
+        toggle.off('click').on('click', function () {
+            const content = $('#kapuk_drawer_content');
+            const icon = $('#kapuk_drawer_icon');
+            const isOpen = content.hasClass('openDrawer');
+            if (isOpen) {
+                content.removeClass('openDrawer').addClass('closedDrawer');
+                icon.removeClass('openIcon').addClass('closedIcon');
+            } else {
+                $('.drawer-content.openDrawer').not(content).removeClass('openDrawer').addClass('closedDrawer');
+                $('.drawer-icon.openIcon').not(icon).removeClass('openIcon').addClass('closedIcon');
+                content.removeClass('closedDrawer').addClass('openDrawer');
+                icon.removeClass('closedIcon').addClass('openIcon');
+            }
+        });
+    }
+
+    // 展开后延迟确认初始化 iframe 并同步登录态
+    toggle.on('click', () => {
+        setTimeout(() => {
+            if ($('#kapuk_drawer_content').hasClass('openDrawer')) {
+                ensureIframe();
+                sendAuthToIframe();
+            }
+        }, 50);
+    });
 
     $('#kapuk_reload_btn').on('click', () => {
         const iframe = getIframe();
@@ -356,17 +363,19 @@ async function addNavbarDrawer() {
     });
 }
 
-function openDrawer() {
+async function openDrawer() {
     ensureIframe();
     const content = $('#kapuk_drawer_content');
-    const icon = $('#kapuk_drawer_icon');
     if (content.hasClass('closedDrawer')) {
-        $('.drawer-content.openDrawer').not(content).removeClass('openDrawer').addClass('closedDrawer');
-        $('.drawer-icon.openIcon').not(icon).removeClass('openIcon').addClass('closedIcon');
-
-        content.removeClass('closedDrawer').addClass('openDrawer');
-        icon.removeClass('closedIcon').addClass('openIcon');
-        sendAuthToIframe();
+        const toggle = $('#kapuk_drawer .drawer-toggle');
+        try {
+            const script = await import('../../../../script.js');
+            if (typeof script.doNavbarIconClick === 'function') {
+                await script.doNavbarIconClick.call(toggle);
+                return;
+            }
+        } catch { /* ignore */ }
+        toggle.trigger('click');
     }
 }
 
