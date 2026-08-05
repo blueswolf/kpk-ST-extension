@@ -392,6 +392,13 @@ async function addNavbarDrawer() {
         $('#top-settings-holder').prepend(drawerHtml);
     }
 
+    try {
+        const logoImgUrl = new URL('kpk-logo.png', import.meta.url).href;
+        $('#kapuk_nav_logo_img').attr('src', logoImgUrl);
+    } catch (e) {
+        console.warn('[kapuk] 加载 logo 图片失败', e);
+    }
+
     const toggle = $('#kapuk_drawer .drawer-toggle');
     try {
         const script = await import('../../../../script.js');
