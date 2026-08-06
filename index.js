@@ -233,6 +233,46 @@ function handleSiteAuth(d) {
 
 /* ---------------- 导入角色卡到酒馆 ---------------- */
 
+/**
+ * 从角色卡 PNG 中解析酒馆内显示名称（卡片元数据 name 字段）。
+ * 遍历 tEXt 块，识别 chara（v1/v2/v3）与 ccv3（v3）关键字；
+ * v1 协议取顶层 name，v2/v3 协议优先取 data.name。
+ * 注意：酒馆写回的元数据块位于 IDAT 之后，必须扫描整个文件。
+ * @param {Blob} blob 角色卡 PNG
+ * @returns {Promise<string>} 卡名（解析失败返回空串）
+ */
+async function readCardNameFromPng(blob) {
+    try {
+        const buf = new Uint8Array(await blob.arrayBuffer());
+        // PNG 签名 8 字节
+        if (buf.length < 8 || buf[0] !== 0x89 || buf[1] !== 0x50) return '';
+        let off = 8;
+        const decoder = new TextDecoder();
+        while (off + 12 <= buf.length) {
+            const len = (buf[off] << 24 | buf[off + 1] << 16 | buf[off + 2] << 8 | buf[off + 3]) >>> 0;
+            const type = decoder.decode(buf.subarray(off + 4, off + 8));
+            if (type === 'tEXt' && off + 8 + len <= buf.length) {
+                const raw = decoder.decode(buf.subarray(off + 8, off + 8 + len));
+                const nul = raw.indexOf('\0');
+                const keyword = nul >= 0 ? raw.slice(0, nul) : '';
+                if (keyword === 'chara' || keyword === 'ccv3') {
+                    const b64 = raw.slice(nul + 1).replace(/\s+/g, '');
+                    const bin = atob(b64);
+                    const bytes = new Uint8Array(bin.length);
+                    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+                    const json = JSON.parse(new TextDecoder().decode(bytes));
+                    const name = String(json?.data?.name ?? json?.name ?? '').trim();
+                    if (name) return name;
+                }
+            }
+            if (type === 'IEND') break;
+            off += 12 + len;
+        }
+    } catch (e) {
+        console.warn('[kapuk] 解析角色卡元数据名称失败', e);
+    }
+    return '';
+}
 
 async function importCardToTavern(url, title) {
     try {
@@ -240,6 +280,8 @@ async function importCardToTavern(url, title) {
         const resp = await fetch(url);
         if (!resp.ok) throw new Error(`获取卡片图片失败 (HTTP ${resp.status})`);
         const blob = await resp.blob();
+        // 上传前先从 PNG 元数据解析酒馆内显示名称（网站卡名是 AI 归纳的，可能与卡片内部 name 不一致）
+        const cardMetaName = await readCardNameFromPng(blob);
         const safeName = (String(title || 'card').replace(/[\\/:*?"<>|\r\n]+/g, '_').slice(0, 80)) || 'card';
         const file = new File([blob], `${safeName}.png`, { type: blob.type || 'image/png' });
 
@@ -260,7 +302,6 @@ async function importCardToTavern(url, title) {
         const importData = await result.json().catch(() => ({}));
         if (importData.error) throw new Error(String(importData.error));
 
-        toastr.success(`角色卡「${title}」已导入酒馆`, '卡铺控');
         try {
             // 与酒馆原生导入 PNG 的体验一致：清空搜索过滤 → 刷新角色列表 → 收起卡铺控面板 → 角色栏展开并闪烁新卡
             $('#character_search_bar').val('').trigger('input');
@@ -275,6 +316,23 @@ async function importCardToTavern(url, title) {
         } catch (e) {
             console.warn('[kapuk] 刷新角色列表/闪烁提示失败', e);
         }
+        // 网站显示的是 AI 归纳的卡名（下载文件名），而酒馆列表按卡片内部 name 字段显示；
+        // 两者不一致时提示酒馆内真实名称，以免用户找不到刚导入的卡。
+        // 优先用 PNG 元数据解析的名称；失败则回退到角色列表查询（接口返回的 file_name 不带 .png 扩展名，需兼容）
+        let tavernName = cardMetaName;
+        if (!tavernName && importData.file_name) {
+            try {
+                const script = await import('../../../../script.js');
+                const chars = Array.isArray(script.characters) ? script.characters : [];
+                const avatarName = `${importData.file_name}.png`;
+                const imported = chars.find(c => c && (c.avatar === importData.file_name || c.avatar === avatarName));
+                tavernName = String(imported?.name ?? imported?.data?.name ?? '').trim();
+            } catch { /* ignore */ }
+        }
+        const successMsg = (tavernName && tavernName !== String(title).trim())
+            ? `已导入：「${title}」→ 酒馆内名称「${tavernName}」`
+            : `角色卡「${title}」已导入酒馆`;
+        toastr.success(successMsg, '卡铺控');
         return { ok: true };
     } catch (e) {
         const msg = String(e?.message || e);
